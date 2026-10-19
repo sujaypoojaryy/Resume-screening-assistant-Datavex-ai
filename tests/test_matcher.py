@@ -18,6 +18,7 @@ Covers all required test cases:
 import io
 import pytest
 import docx
+import pypdf
 from reportlab.pdfgen import canvas
 
 from matcher.extract import SkillExtractor
@@ -259,20 +260,82 @@ def test_clean_text_hyphenated_line_breaks():
 
 
 def test_single_letter_skill_detection(extractor):
-    """Verify single-letter skills such as 'R' and 'C' are extracted accurately."""
-    jd_text = "Requires proficiency in R and Python."
-    resume_text = "Experienced in R and Python data analysis."
+    """Verify skills such as R and C are matched via qualified forms 'R programming' and 'C programming'."""
+    jd_text = "Requires proficiency in R programming, C programming, and Python."
+    resume_text = "Experienced in R programming, C programming, and Python data analysis."
 
     jd_skills = extractor.extract_skills(jd_text)
     resume_skills = extractor.extract_skills(resume_text)
 
     assert "R" in jd_skills
+    assert "C" in jd_skills
     assert "Python" in jd_skills
     assert "R" in resume_skills
+    assert "C" in resume_skills
 
     result = calculate_match(jd_skills, resume_skills)
-    assert "R" in result["matched_skills"]
+    assert result["matched_skills"] == ["R", "C", "Python"]
     assert result["match_score"] == 100
+
+
+def test_negative_matching_rd_and_type_c(extractor):
+    """'R&D' does not match R, and 'Type C' does not match C."""
+    text_rd = "Background in R&D and product research."
+    skills_rd = extractor.extract_skills(text_rd)
+    assert "R" not in skills_rd
+
+    text_type_c = "Familiar with USB Type C and Type-C hardware connectors."
+    skills_type_c = extractor.extract_skills(text_type_c)
+    assert "C" not in skills_type_c
+
+
+def test_negative_matching_tfidf_and_ts_sci(extractor):
+    """'TF-IDF' does not match TensorFlow, and 'TS/SCI' does not match TypeScript."""
+    text_tfidf = "Skilled in TF-IDF feature extraction and NLTK text processing."
+    skills_tfidf = extractor.extract_skills(text_tfidf)
+    assert "TensorFlow" not in skills_tfidf
+
+    text_tssci = "Security professional with active TS/SCI government clearance."
+    skills_tssci = extractor.extract_skills(text_tssci)
+    assert "TypeScript" not in skills_tssci
+
+
+def test_positive_matching_nosql_and_reactjs(extractor):
+    """'No-SQL' and 'React.js' map to the intended canonical skills (NoSQL and React)."""
+    text = "Engineered scalable solutions using No-SQL data stores and React.js frontend."
+    skills = extractor.extract_skills(text)
+    assert "NoSQL" in skills
+    assert "React" in skills
+    # Ensure No-SQL does not match relational SQL
+    assert "SQL" not in skills
+    # Ensure React.js does not match JavaScript
+    assert "JavaScript" not in skills
+
+
+def test_pdf_line_wrap_hyphenation(extractor):
+    """'machine-\nlearning' and 'deep-\nlearning' (PDF line wraps) match Machine Learning and Deep Learning."""
+    text = "Hands-on experience building machine-\nlearning algorithms and deep-\nlearning architectures."
+    skills = extractor.extract_skills(text)
+    assert "Machine Learning" in skills
+    assert "Deep Learning" in skills
+
+
+def test_spaced_and_joined_forms_deduplicated(extractor):
+    """A skill that appears in both its spaced and joined form is listed once in matched_skills (no duplicates)."""
+    jd_text = "Looking for expertise in Machine Learning, Deep Learning, and scikit-learn."
+    resume_text = "Proficient in Machine Learning, machinelearning, Deep Learning, deeplearning, scikit-learn, and scikitlearn."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    resume_skills = extractor.extract_skills(resume_text)
+
+    # De-duplicated in extracted list
+    assert resume_skills.count("Machine Learning") == 1
+    assert resume_skills.count("Deep Learning") == 1
+    assert resume_skills.count("scikit-learn") == 1
+
+    result = calculate_match(jd_skills, resume_skills)
+    assert result["matched_skills"] == ["Machine Learning", "Deep Learning", "scikit-learn"]
+    assert len(result["matched_skills"]) == 3
 
 
 def test_multi_word_skill_detection(extractor):
@@ -414,3 +477,26 @@ def test_empty_or_corrupted_pdf():
     with pytest.raises(ParsingError) as exc_info2:
         extract_text_from_file(b"This is not a valid pdf header", filename="corrupted.pdf")
     assert "Could not open PDF file" in str(exc_info2.value)
+
+
+def test_empty_file_error():
+    """Empty file raises specific clear validation error."""
+    with pytest.raises(EmptyDocumentError) as exc_info:
+        extract_text_from_file(b"", filename="empty_resume.txt")
+    assert "The plain text file is empty. Please provide a file with content." in str(exc_info.value)
+
+
+def test_password_protected_pdf_error():
+    """Password-protected PDF raises specific friendly error suggesting pasting text."""
+    bio = io.BytesIO()
+    writer = pypdf.PdfWriter()
+    writer.add_blank_page(width=100, height=100)
+    writer.encrypt("secret_password")
+    writer.write(bio)
+    bio.seek(0)
+
+    with pytest.raises(NoExtractableTextError) as exc_info:
+        extract_text_from_file(bio.getvalue(), filename="secure.pdf")
+    assert "This PDF is password-protected" in str(exc_info.value)
+    assert "Please remove password protection or paste the text directly." in str(exc_info.value)
+

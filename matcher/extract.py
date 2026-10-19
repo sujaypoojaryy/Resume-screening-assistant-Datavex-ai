@@ -61,16 +61,16 @@ class SkillExtractor:
             canonical = row["canonical"]
             aliases = row["aliases"]
 
-            # Canonical term
+            # Canonical term (exclude bare single letters to avoid false positive matches)
             norm_canonical = normalize_token(canonical)
-            if norm_canonical:
+            if norm_canonical and len(norm_canonical) > 1:
                 vocab_set.add(norm_canonical)
                 self.term_to_canonical[norm_canonical] = canonical
 
             # Alias terms
             for alias in aliases:
                 norm_alias = normalize_token(alias)
-                if norm_alias:
+                if norm_alias and len(norm_alias) > 1:
                     vocab_set.add(norm_alias)
                     self.term_to_canonical[norm_alias] = canonical
 

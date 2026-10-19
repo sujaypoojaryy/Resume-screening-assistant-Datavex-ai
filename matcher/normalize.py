@@ -9,7 +9,7 @@ import re
 def clean_text(raw_text: str) -> str:
     """Clean and normalize raw document text.
     
-    1. Removes hyphenated line breaks (e.g., 'inter-\\nview' -> 'interview').
+    1. Removes hyphenated line breaks (e.g., 'deve-\\nlopment' -> 'development').
     2. Normalizes odd unicode characters (bullets, smart quotes, dashes, nbsp).
     3. Preserves special programming tokens before punctuation removal:
        - 'C++' -> '__c_plus_plus__'
@@ -51,6 +51,12 @@ def clean_text(raw_text: str) -> str:
     text = re.sub(r'(?i)(?<!\w)\.net(?!\w)', ' __dot_net__ ', text)
     text = re.sub(r'(?i)(?<!\w)node\.js(?!\w)', ' __node_js__ ', text)
     text = re.sub(r'(?i)(?<!\w)ci/cd(?!\w)', ' __ci_cd__ ', text)
+    text = re.sub(r'(?i)(?<!\w)react\.js(?!\w)', ' reactjs ', text)
+    text = re.sub(r'(?i)(?<!\w)tf\s*-\s*idf(?!\w)', ' tfidf ', text)
+    text = re.sub(r'(?i)(?<!\w)ts\s*/\s*sci(?!\w)', ' tssci ', text)
+    text = re.sub(r'(?i)(?<!\w)r\s*&\s*d(?!\w)', ' randd ', text)
+    text = re.sub(r'(?i)(?<!\w)type\s*[- ]\s*c(?!\w)', ' typec ', text)
+    text = re.sub(r'(?i)(?<!\w)no\s*-\s*sql(?!\w)', ' nosql ', text)
 
     # 4. Strip remaining punctuation (keeping alphanumeric and underscores)
     text = re.sub(r'[^\w\s]', ' ', text)
