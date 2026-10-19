@@ -26,11 +26,13 @@ class SkillExtractor:
         self.vocab_list: List[str] = []
         self._build_vocabulary()
 
-        # Initialize scikit-learn CountVectorizer with custom vocabulary and ngrams up to 3
+        # Initialize scikit-learn CountVectorizer with custom vocabulary and dynamic ngrams
+        max_n = max(len(t.split()) for t in self.vocab_list)
         self.vectorizer = CountVectorizer(
             vocabulary=self.vocab_list,
-            ngram_range=(1, 3),
-            lowercase=True
+            ngram_range=(1, max_n),
+            token_pattern=r"(?u)\b\w+\b",
+            lowercase=True,
         )
 
     def _load_skills_dataframe(self, path: Path) -> pd.DataFrame:

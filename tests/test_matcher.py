@@ -255,7 +255,50 @@ def test_clean_text_hyphenated_line_breaks():
     raw = "Hands-on experience in ma-\nchine learning and sci-\nkit-learn."
     cleaned = clean_text(raw)
     assert "machine learning" in cleaned
-    assert "scikit learn" in cleaned or "scikitlearn" in cleaned or "scikit" in cleaned
+    assert "scikitlearn" in cleaned or "scikit learn" in cleaned
+
+
+def test_single_letter_skill_detection(extractor):
+    """Verify single-letter skills such as 'R' and 'C' are extracted accurately."""
+    jd_text = "Requires proficiency in R and Python."
+    resume_text = "Experienced in R and Python data analysis."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    resume_skills = extractor.extract_skills(resume_text)
+
+    assert "R" in jd_skills
+    assert "Python" in jd_skills
+    assert "R" in resume_skills
+
+    result = calculate_match(jd_skills, resume_skills)
+    assert "R" in result["matched_skills"]
+    assert result["match_score"] == 100
+
+
+def test_multi_word_skill_detection(extractor):
+    """Verify multi-word technical skills are extracted with exact boundaries."""
+    jd_text = "We require Machine Learning, Deep Learning, and Power BI."
+    resume_text = "Skilled in Machine Learning and Power BI."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    resume_skills = extractor.extract_skills(resume_text)
+
+    assert jd_skills == ["Machine Learning", "Deep Learning", "Power BI"]
+    assert resume_skills == ["Machine Learning", "Power BI"]
+
+    result = calculate_match(jd_skills, resume_skills)
+    assert result["matched_skills"] == ["Machine Learning", "Power BI"]
+    assert result["missing_skills"] == ["Deep Learning"]
+    assert result["match_score"] == 66.7
+
+
+def test_scikit_learn_hyphenated_linebreak_extraction(extractor):
+    """Verify scikit-\nlearn line-break in PDF/DOCX maps to canonical scikit-learn via scikitlearn alias."""
+    text_with_break = "Extensive work with scikit-\nlearn and ML models."
+    skills = extractor.extract_skills(text_with_break)
+
+    assert "scikit-learn" in skills
+    assert "Machine Learning" in skills
 
 
 # -------------------------------------------------------------------------

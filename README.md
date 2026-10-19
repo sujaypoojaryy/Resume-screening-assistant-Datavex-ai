@@ -135,45 +135,37 @@ The system automatically normalizes both keys and aliases, updates the `CountVec
 
 ## 8. Pytest Test Results
 
-All 17 test cases pass:
+All 20 test cases pass:
 
 ```
 ============================= test session starts =============================
 platform win32 -- Python 3.13.6, pytest-9.1.1, pluggy-1.6.0
 rootdir: D:\Datavex AI
-collected 17 items
+collected 20 items
 
 tests/test_matcher.py::test_main_example PASSED                          [  5%]
-tests/test_matcher.py::test_tc1_all_three_matched PASSED                 [ 11%]
-tests/test_matcher.py::test_tc2_no_required_skills PASSED                [ 17%]
-tests/test_matcher.py::test_tc3_every_required_skill_present PASSED      [ 23%]
-tests/test_matcher.py::test_tc4_duplicate_mentions_counted_once PASSED   [ 29%]
-tests/test_matcher.py::test_tc5_empty_resume_validation PASSED           [ 35%]
-tests/test_matcher.py::test_tc6_alias_normalization PASSED               [ 41%]
-tests/test_matcher.py::test_tc7_extra_unrelated_skills_not_counted PASSED [ 47%]
-tests/test_matcher.py::test_java_vs_javascript PASSED                    [ 52%]
-tests/test_matcher.py::test_special_tokens_cpp_csharp_dotnet_nodejs PASSED [ 58%]
-tests/test_matcher.py::test_zero_recognized_skills_in_jd PASSED          [ 64%]
-tests/test_matcher.py::test_clean_text_hyphenated_line_breaks PASSED     [ 70%]
-tests/test_matcher.py::test_identical_skills_across_pdf_docx_txt PASSED  [ 76%]
-tests/test_matcher.py::test_docx_table_parsing PASSED                    [ 82%]
-tests/test_matcher.py::test_unsupported_file_type PASSED                 [ 88%]
-tests/test_matcher.py::test_file_too_large PASSED                        [ 94%]
+tests/test_matcher.py::test_tc1_all_three_matched PASSED                 [ 10%]
+tests/test_matcher.py::test_tc2_no_required_skills PASSED                [ 15%]
+tests/test_matcher.py::test_tc3_every_required_skill_present PASSED      [ 20%]
+tests/test_matcher.py::test_tc4_duplicate_mentions_counted_once PASSED   [ 25%]
+tests/test_matcher.py::test_tc5_empty_resume_validation PASSED           [ 30%]
+tests/test_matcher.py::test_tc6_alias_normalization PASSED               [ 35%]
+tests/test_matcher.py::test_tc7_extra_unrelated_skills_not_counted PASSED [ 40%]
+tests/test_matcher.py::test_java_vs_javascript PASSED                    [ 45%]
+tests/test_matcher.py::test_special_tokens_cpp_csharp_dotnet_nodejs PASSED [ 50%]
+tests/test_matcher.py::test_zero_recognized_skills_in_jd PASSED          [ 55%]
+tests/test_matcher.py::test_clean_text_hyphenated_line_breaks PASSED     [ 60%]
+tests/test_matcher.py::test_single_letter_skill_detection PASSED         [ 65%]
+tests/test_matcher.py::test_multi_word_skill_detection PASSED            [ 70%]
+tests/test_matcher.py::test_scikit_learn_hyphenated_linebreak_extraction PASSED [ 75%]
+tests/test_matcher.py::test_identical_skills_across_pdf_docx_txt PASSED  [ 80%]
+tests/test_matcher.py::test_docx_table_parsing PASSED                    [ 85%]
+tests/test_matcher.py::test_unsupported_file_type PASSED                 [ 90%]
+tests/test_matcher.py::test_file_too_large PASSED                        [ 95%]
 tests/test_matcher.py::test_empty_or_corrupted_pdf PASSED                [100%]
 
-============================= 17 passed in 2.65s ==============================
+============================= 20 passed in 3.24s ==============================
 ```
 
 ---
 
-## 9. Interview Talking Points
-
-1. **Why `CountVectorizer` with a custom vocabulary instead of simple regex strings?**
-   - Simple string searches like `"Java" in text` will incorrectly match `"JavaScript"`. `CountVectorizer` extracts tokens with exact n-gram token boundaries.
-   - It also handles multiple aliases mapping back to one canonical skill in a single vectorized pass.
-2. **Handling tricky programming language tokens (C++, C#, .NET, Node.js):**
-   - Standard NLP tokenizers discard symbols like `+`, `#`, and `.`. In `matcher/normalize.py`, special tokens are mapped to safe placeholders (`__c_plus_plus__`, `__c_sharp__`, `__dot_net__`, `__node_js__`) before general punctuation stripping.
-3. **Using NumPy for matching:**
-   - Rather than nested Python loops or repeated lookups, NumPy binary vectors represent skills found in JD and candidate resumes. Set operations are computed via bitwise operators (`&`) and `np.sum()`.
-4. **Ethical AI & Recruiter Assist Principle:**
-   - Text matching does not represent soft skills, adaptability, or project depth. The tool explicitly guards against automated rejection, displays prominent disclaimers, and uses neutral guidance language.

@@ -3,10 +3,7 @@
 A recruiter screening assistant built using Streamlit, scikit-learn, NumPy, and Pandas.
 Implements a two-view architecture (Input View and Results View) using st.session_state.
 """
-import io
 import json
-from pathlib import Path
-import pandas as pd
 import streamlit as st
 
 from matcher.extract import SkillExtractor
@@ -71,6 +68,10 @@ if "file_jd_text" not in st.session_state:
 if "results" not in st.session_state:
     st.session_state["results"] = None
 
+# Preserve keyed widget values across views where the widgets are unrendered
+for key in ("resume_text", "jd_text"):
+    st.session_state[key] = st.session_state[key]
+
 
 def load_sample_data():
     """Populate text inputs with sample benchmark data."""
@@ -104,9 +105,15 @@ if st.session_state["current_view"] == "input":
                 )
                 st.caption(f"Loaded {resume_file.name}")
             except (ValidationError, ParsingError) as err:
+                st.session_state["file_resume_text"] = None
                 st.error(str(err))
             except Exception as err:
+                st.session_state["file_resume_text"] = None
                 st.error(f"Error reading file: {err}")
+        else:
+            st.session_state["file_resume_text"] = None
+
+        st.caption("An uploaded file takes priority over pasted text.")
 
         st.text_area(
             "Or paste resume text",
@@ -130,9 +137,15 @@ if st.session_state["current_view"] == "input":
                 )
                 st.caption(f"Loaded {jd_file.name}")
             except (ValidationError, ParsingError) as err:
+                st.session_state["file_jd_text"] = None
                 st.error(str(err))
             except Exception as err:
+                st.session_state["file_jd_text"] = None
                 st.error(f"Error reading file: {err}")
+        else:
+            st.session_state["file_jd_text"] = None
+
+        st.caption("An uploaded file takes priority over pasted text.")
 
         st.text_area(
             "Or paste job description text",
@@ -198,15 +211,19 @@ elif st.session_state["current_view"] == "results":
         # Disclaimer in st.info
         st.info(f"Notice: {DISCLAIMER_TEXT}")
 
-        # Full-width score and thin progress bar
-        st.markdown(f'<div class="score-title">Match score: {result["match_score"]}%</div>', unsafe_allow_html=True)
-        st.markdown(
-            f'<div class="score-subtitle">{result["matched_count"]} of {result["total_required"]} required skills found. Review recommended.</div>',
-            unsafe_allow_html=True
-        )
+        # If no recognized skills in JD, show warning and skip score title, subtitle, and progress bar
+        if result["total_required"] == 0:
+            st.warning(result["recommendation"])
+        else:
+            # Full-width score and thin progress bar
+            st.markdown(f'<div class="score-title">Match score: {result["match_score"]}%</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="score-subtitle">{result["matched_count"]} of {result["total_required"]} required skills found. Review recommended.</div>',
+                unsafe_allow_html=True
+            )
 
-        progress_val = result["match_score"] / 100.0 if result["total_required"] > 0 else 0.0
-        st.progress(progress_val)
+            progress_val = result["match_score"] / 100.0
+            st.progress(progress_val)
 
         st.markdown("---")
 

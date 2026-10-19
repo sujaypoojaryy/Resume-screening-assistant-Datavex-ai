@@ -3,7 +3,7 @@
   "SQL": ["structured query language", "postgresql", "mysql", "tsql", "plsql"],
   "Machine Learning": ["ML", "machine-learning"],
   "Pandas": [],
-  "scikit-learn": ["sklearn", "scikit learn"],
+  "scikit-learn": ["sklearn", "scikit learn", "scikitlearn"],
   "Excel": ["ms excel", "microsoft excel"],
   "C++": ["cpp"],
   "C#": ["csharp", "c sharp"],
@@ -32,5 +32,7 @@
   "Redis": [],
   "Spark": ["apache spark", "pyspark"],
   "Tableau": [],
-  "Power BI": ["powerbi"]
+  "Power BI": ["powerbi"],
+  "R": ["r programming", "r language"],
+  "C": []
 }

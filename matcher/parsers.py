@@ -115,7 +115,7 @@ def parse_pdf(stream_or_bytes: Union[BinaryIO, bytes]) -> str:
             )
 
     extracted_pages = []
-    for idx, page in enumerate(reader.pages):
+    for page in reader.pages:
         try:
             page_text = page.extract_text()
             if page_text:
@@ -210,7 +210,6 @@ def extract_text_from_file(source: Union[str, Path, BinaryIO, bytes], filename: 
     # Check extension
     suffix = Path(name).suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
-        supported_list = ", ".join(sorted(SUPPORTED_EXTENSIONS))
         raise UnsupportedFormatError(
             f"Unsupported file format '{suffix}' for '{name}'. "
             f"Supported formats are: PDF (.pdf), Word (.docx), and Plain Text (.txt)."

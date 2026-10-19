@@ -55,18 +55,10 @@ def calculate_match(jd_skills: List[str], resume_skills: List[str]) -> Dict[str,
         matched_count = 0
         recommendation = "Review recommended: No recognized technical skills detected in the Job Description."
     else:
-        # Binary vectors with NumPy
-        # req_vector: binary 1 for every required skill in JD
-        req_vector = np.ones(len(jd_skills), dtype=int)
-        # res_vector: binary 1 if candidate resume contains the required skill, else 0
+        # Binary vector with NumPy representing presence of required skills in resume
         res_vector = np.array([1 if skill in resume_set else 0 for skill in jd_skills], dtype=int)
-
-        # NumPy bitwise AND for matched skills
-        matched_vector = req_vector & res_vector
-
-        # NumPy sum calculations
-        matched_count = int(np.sum(matched_vector))
-        total_required = int(np.sum(req_vector))
+        matched_count = int(res_vector.sum())
+        total_required = len(jd_skills)
 
         score_raw = (matched_count / total_required) * 100.0
         match_score = int(score_raw) if score_raw.is_integer() else round(score_raw, 1)
