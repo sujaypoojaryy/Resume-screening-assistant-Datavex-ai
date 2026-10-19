@@ -1,0 +1,11 @@
+{
+  "matched_skills": [
+    "Python",
+    "SQL",
+    "Pandas"
+  ],
+  "missing_skills": [
+    "Machine Learning"
+  ],
+  "match_score": 75
+}
