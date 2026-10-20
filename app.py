@@ -158,9 +158,9 @@ if st.session_state["current_view"] == "input":
     st.markdown("<br>", unsafe_allow_html=True)
     btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 5])
     with btn_col1:
-        analyze_clicked = st.button("Analyze", type="primary", use_container_width=True)
+        analyze_clicked = st.button("Analyze", type="primary", width="stretch")
     with btn_col2:
-        st.button("Load sample data", on_click=load_sample_data, use_container_width=True)
+        st.button("Load sample data", on_click=load_sample_data, width="stretch")
 
     if analyze_clicked:
         # Effective text prioritizes uploaded file content if present, else pasted text
@@ -255,7 +255,7 @@ elif st.session_state["current_view"] == "results":
         # Results table (Pandas DataFrame)
         st.markdown("**Skill breakdown**")
         df = result["results_df"]
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)
 
         # "How is this score calculated?" expander
         with st.expander("How is this score calculated?"):
@@ -278,7 +278,7 @@ elif st.session_state["current_view"] == "results":
                 data=csv_bytes,
                 file_name="skill_match_results.csv",
                 mime="text/csv",
-                use_container_width=True
+                width="stretch"
             )
         with exp_col2:
             json_payload = {
@@ -292,7 +292,7 @@ elif st.session_state["current_view"] == "results":
                 data=json_bytes,
                 file_name="skill_match_results.json",
                 mime="application/json",
-                use_container_width=True
+                width="stretch"
             )
     else:
         st.warning("No results found. Please return to the input page.")
