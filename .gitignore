@@ -1,3 +1,4 @@
+# Python bytecode and caches
 __pycache__/
 *.pyc
 *.pyo
@@ -5,11 +6,30 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Virtual environments
 .venv/
 venv/
 ENV/
+env/
+
+# Packaging and build
 *.egg-info/
 dist/
 build/
+
+# Operating system files
 .DS_Store
 Thumbs.db
+
+# Environment variables and secrets
+.env
+*.env
+*.key
+*.pem
+
+# Logs and local artifacts
+*.log
+*.tmp
+temp/
+candidate_resumes/

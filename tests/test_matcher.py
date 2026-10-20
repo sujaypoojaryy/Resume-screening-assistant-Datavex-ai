@@ -500,3 +500,189 @@ def test_password_protected_pdf_error():
     assert "This PDF is password-protected" in str(exc_info.value)
     assert "Please remove password protection or paste the text directly." in str(exc_info.value)
 
+
+# -------------------------------------------------------------------------
+# New Regression Tests: Alias Accuracy, Disambiguation & Assignment Compliance
+# -------------------------------------------------------------------------
+
+def test_alias_separation_git_vs_github(extractor):
+    """Git and GitHub are distinct technologies: GitHub must not falsely match Git."""
+    jd_text = "Looking for a software engineer skilled in Git version control."
+    resume_github_only = "Maintained open source code on GitHub with pull requests and issues."
+    resume_both = "Proficient in Git branching workflows and GitHub collaboration."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    assert jd_skills == ["Git"]
+
+    # Candidate with only GitHub
+    skills_gh = extractor.extract_skills(resume_github_only)
+    assert "GitHub" in skills_gh
+    assert "Git" not in skills_gh
+    res_gh = calculate_match(jd_skills, skills_gh)
+    assert res_gh["matched_skills"] == []
+    assert res_gh["match_score"] == 0
+
+    # Candidate with both Git and GitHub
+    skills_both = extractor.extract_skills(resume_both)
+    assert "Git" in skills_both
+    assert "GitHub" in skills_both
+    res_both = calculate_match(jd_skills, skills_both)
+    assert res_both["matched_skills"] == ["Git"]
+    assert res_both["match_score"] == 100
+
+
+def test_alias_separation_bash_vs_linux(extractor):
+    """Bash and Linux are distinct technologies: Bash must not falsely match Linux."""
+    jd_text = "Requires deep experience with Linux system internals."
+    resume_bash_only = "Automated continuous delivery tasks using Bash shell scripts."
+    resume_both = "Administered Linux servers and wrote Bash automation tools."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    assert jd_skills == ["Linux"]
+
+    # Bash only candidate
+    skills_bash = extractor.extract_skills(resume_bash_only)
+    assert "Bash" in skills_bash
+    assert "Linux" not in skills_bash
+    res_bash = calculate_match(jd_skills, skills_bash)
+    assert res_bash["matched_skills"] == []
+    assert res_bash["match_score"] == 0
+
+    # Both candidate
+    skills_both = extractor.extract_skills(resume_both)
+    assert "Linux" in skills_both
+    assert "Bash" in skills_both
+    res_both = calculate_match(jd_skills, skills_both)
+    assert res_both["matched_skills"] == ["Linux"]
+    assert res_both["match_score"] == 100
+
+
+def test_alias_separation_ts_vs_typescript(extractor):
+    """Ambiguous abbreviation TS must not match TypeScript; only explicit TypeScript does."""
+    ambiguous_text = "Knowledge of TS streaming protocols and video TS packet processing."
+    valid_text = "Frontend developer skilled in TypeScript and React."
+
+    skills_ambiguous = extractor.extract_skills(ambiguous_text)
+    assert "TypeScript" not in skills_ambiguous
+
+    skills_valid = extractor.extract_skills(valid_text)
+    assert "TypeScript" in skills_valid
+    assert "React" in skills_valid
+
+
+def test_alias_separation_tf_vs_tensorflow(extractor):
+    """Ambiguous abbreviation tf must not match TensorFlow; only explicit TensorFlow does."""
+    ambiguous_text = "Computed TF (term frequency) statistics for document indexing."
+    valid_text = "Trained deep learning models using TensorFlow on GPU clusters."
+
+    skills_ambiguous = extractor.extract_skills(ambiguous_text)
+    assert "TensorFlow" not in skills_ambiguous
+
+    skills_valid = extractor.extract_skills(valid_text)
+    assert "TensorFlow" in skills_valid
+
+
+def test_alias_separation_postgresql_vs_sql(extractor):
+    """PostgreSQL and SQL are distinct technologies: PostgreSQL must not falsely match SQL."""
+    jd_text = "Job requires SQL database development."
+    resume_pg_only = "Expert in PostgreSQL database administration."
+    resume_both = "Skilled in SQL query optimization and PostgreSQL database management."
+
+    jd_skills = extractor.extract_skills(jd_text)
+    assert jd_skills == ["SQL"]
+
+    # PostgreSQL only candidate
+    skills_pg = extractor.extract_skills(resume_pg_only)
+    assert "PostgreSQL" in skills_pg
+    assert "SQL" not in skills_pg
+    res_pg = calculate_match(jd_skills, skills_pg)
+    assert res_pg["matched_skills"] == []
+    assert res_pg["match_score"] == 0
+
+    # Both candidate
+    skills_both = extractor.extract_skills(resume_both)
+    assert "SQL" in skills_both
+    assert "PostgreSQL" in skills_both
+    res_both = calculate_match(jd_skills, skills_both)
+    assert res_both["matched_skills"] == ["SQL"]
+    assert res_both["match_score"] == 100
+
+
+def test_valid_scikitlearn_aliases(extractor):
+    """Legitimate scikit-learn aliases normalize to canonical 'scikit-learn'."""
+    assert extractor.extract_skills("Implemented random forest with scikit-learn.") == ["scikit-learn"]
+    assert extractor.extract_skills("Implemented random forest with sklearn.") == ["scikit-learn"]
+    assert extractor.extract_skills("Implemented random forest with scikit learn.") == ["scikit-learn"]
+    assert extractor.extract_skills("Implemented random forest with scikitlearn.") == ["scikit-learn"]
+
+
+def test_sql_vs_nosql_boundary_regression(extractor):
+    """SQL is not matched inside NoSQL and vice versa."""
+    jd_sql = extractor.extract_skills("Requires SQL.")
+    res_nosql = extractor.extract_skills("Built NoSQL datastores with MongoDB.")
+
+    assert "SQL" not in res_nosql
+    assert "NoSQL" in res_nosql
+    match_result = calculate_match(jd_sql, res_nosql)
+    assert match_result["matched_skills"] == []
+    assert match_result["missing_skills"] == ["SQL"]
+    assert match_result["match_score"] == 0
+
+
+def test_case_variations_and_punctuation(extractor):
+    """Skill matching is case-insensitive and resilient to surrounding punctuation."""
+    text = "pYtHoN! (sQl)? [pAnDaS], {dOcKeR}... <kUbErNeTeS>;"
+    skills = extractor.extract_skills(text)
+    assert set(skills) == {"Python", "SQL", "Pandas", "Docker", "Kubernetes"}
+
+
+def test_empty_job_description_validation():
+    """Empty or whitespace job description raises EmptyDocumentError."""
+    with pytest.raises(EmptyDocumentError) as exc_info:
+        validate_raw_text("", document_name="Job description")
+    assert "Job description is empty" in str(exc_info.value)
+
+    with pytest.raises(EmptyDocumentError) as exc_info2:
+        validate_raw_text("   \n\t   ", document_name="Job description")
+    assert "Job description is empty or contains only whitespace" in str(exc_info2.value)
+
+
+def test_scoring_zero_and_hundred_percent(extractor):
+    """Verify clean 0% and 100% calculation."""
+    jd_skills = ["Python", "SQL"]
+    res_none = ["Docker", "AWS"]
+    res_all = ["SQL", "Python"]
+
+    res_zero = calculate_match(jd_skills, res_none)
+    assert res_zero["match_score"] == 0
+    assert res_zero["matched_skills"] == []
+    assert res_zero["missing_skills"] == ["Python", "SQL"]
+
+    res_hundred = calculate_match(jd_skills, res_all)
+    assert res_hundred["match_score"] == 100
+    assert res_hundred["matched_skills"] == ["Python", "SQL"]
+    assert res_hundred["missing_skills"] == []
+
+
+def test_assignment_benchmark_example_75_percent(extractor):
+    """Original assignment example strictly yields 75% match score and expected skill breakdown."""
+    jd_text = "Python, SQL, Machine Learning, Pandas"
+    resume_text = "Python, Pandas, SQL, Excel"
+
+    jd_skills = extractor.extract_skills(jd_text)
+    resume_skills = extractor.extract_skills(resume_text)
+
+    result = calculate_match(jd_skills, resume_skills)
+
+    assert result["matched_skills"] == ["Python", "SQL", "Pandas"]
+    assert result["missing_skills"] == ["Machine Learning"]
+    assert result["additional_skills"] == ["Excel"]
+    assert result["match_score"] == 75
+    assert result["matched_count"] == 3
+    assert result["total_required"] == 4
+    assert result["disclaimer"] == (
+        "This score reflects text overlap with the job description and is not a definitive "
+        "measure of candidate quality. It should assist, not replace, human review."
+    )
+
+

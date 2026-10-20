@@ -26,18 +26,6 @@ st.markdown("""
     body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
-    .score-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #111827;
-        margin: 0;
-    }
-    .score-subtitle {
-        font-size: 1rem;
-        color: #4B5563;
-        margin-top: 0.25rem;
-        margin-bottom: 0.8rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -198,101 +186,110 @@ if st.session_state["current_view"] == "input":
 # VIEW 2: RESULTS PAGE
 # =========================================================================
 elif st.session_state["current_view"] == "results":
-    # Top navigation: Back to inputs button
-    if st.button("← Back to inputs"):
+    # Navigation and title
+    if st.button("← Back to inputs", help="Return to input page"):
         st.session_state["current_view"] = "input"
         st.rerun()
 
-    st.title("Screening Results")
+    st.markdown(
+        '<h1 style="font-size: 2.25rem; font-weight: 800; color: #111827; margin: 0.25rem 0 0.75rem 0; padding: 0; line-height: 1.2;">Screening results</h1>',
+        unsafe_allow_html=True,
+    )
 
     result = st.session_state.get("results")
 
     if result is not None:
-        # Disclaimer in st.info
+        # 2. Directly under the title, full width, the disclaimer in st.info (keep the exact text).
         st.info(f"Notice: {DISCLAIMER_TEXT}")
 
-        # If no recognized skills in JD, show warning and skip score title, subtitle, and progress bar
+        def _render_details(res):
+            st.markdown("**Matched skills**")
+            st.write(", ".join(res["matched_skills"]) if res["matched_skills"] else "None")
+
+            st.markdown("**Missing skills**")
+            st.write(", ".join(res["missing_skills"]) if res["missing_skills"] else "None")
+
+            st.markdown("**Additional skills in resume**")
+            st.write(", ".join(res["additional_skills"]) if res["additional_skills"] else "None")
+
+            st.markdown("**Skill breakdown**")
+            df = res["results_df"]
+            st.dataframe(df, hide_index=True, width="stretch")
+
+            with st.expander("How is this score calculated?"):
+                st.write(
+                    "Match score = (required skills found in resume / total required skills) * 100\n\n"
+                    "- Required skills are skills extracted from the job description.\n"
+                    "- Equal weighting across all required skills.\n"
+                    "- Duplicate mentions of a skill count once.\n"
+                    "- Additional skills in the resume are not counted in the score.\n"
+                    "- If no recognized skills are found in the job description, the score is 0%."
+                )
+
+            exp_col1, exp_col2, _ = st.columns([1.5, 1.5, 3])
+            with exp_col1:
+                csv_bytes = df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    "Download CSV",
+                    data=csv_bytes,
+                    file_name="skill_match_results.csv",
+                    mime="text/csv",
+                    width="stretch",
+                )
+            with exp_col2:
+                json_payload = {
+                    "matched_skills": res["matched_skills"],
+                    "missing_skills": res["missing_skills"],
+                    "match_score": res["match_score"],
+                }
+                json_bytes = json.dumps(json_payload, indent=2).encode("utf-8")
+                st.download_button(
+                    "Download JSON",
+                    data=json_bytes,
+                    file_name="skill_match_results.json",
+                    mime="application/json",
+                    width="stretch",
+                )
+
+        # If total_required == 0, skip the score panel and show only st.warning across full width
         if result["total_required"] == 0:
             st.warning(result["recommendation"])
+            _render_details(result)
         else:
-            # Full-width score and thin progress bar
-            st.markdown(f'<div class="score-title">Match score: {result["match_score"]}%</div>', unsafe_allow_html=True)
-            st.markdown(
-                f'<div class="score-subtitle">{result["matched_count"]} of {result["total_required"]} required skills found. Review recommended.</div>',
-                unsafe_allow_html=True
-            )
+            # Two-column layout: left column for round score panel, right column for details
+            col_score, col_details = st.columns([1, 2], gap="large")
 
-            progress_val = result["match_score"] / 100.0
-            st.progress(progress_val)
+            # Left column (centered, larger round score panel)
+            with col_score:
+                score_val = result["match_score"]
+                # Circular progress geometry: r=66, circumference = 2 * pi * 66 = 414.69
+                circumference = 414.69
+                dashoffset = round(circumference * (1.0 - (score_val / 100.0)), 2)
 
-        st.markdown("---")
+                st.markdown(
+                    f"""
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; padding: 1.75rem 1.25rem; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); gap: 1rem;">
+                        <span style="font-weight: 700; font-size: 1.35rem; color: #111827; text-align: center;">Match score</span>
+                        <svg width="185" height="185" viewBox="0 0 160 160" style="display: block; margin: 0.25rem auto;">
+                            <circle cx="80" cy="80" r="66" fill="none" stroke="#E5E7EB" stroke-width="13" />
+                            <circle cx="80" cy="80" r="66" fill="none" stroke="#0F766E" stroke-width="13"
+                                    stroke-linecap="round" stroke-dasharray="{circumference}" stroke-dashoffset="{dashoffset}"
+                                    transform="rotate(-90 80 80)" />
+                            <text x="80" y="93" text-anchor="middle" font-size="42px" font-weight="800" fill="#111827"
+                                  font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+                                {score_val}%
+                            </text>
+                        </svg>
+                        <div style="font-size: 1.1rem; font-weight: 500; color: #374151; line-height: 1.5; text-align: center;">
+                            {result['matched_count']} of {result['total_required']} required skills found. {result['recommendation']}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        # Matched / missing / additional skills in three columns
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.markdown("**Matched skills**")
-            if result["matched_skills"]:
-                st.write(", ".join(result["matched_skills"]))
-            else:
-                st.write("None")
-
-        with col_m2:
-            st.markdown("**Missing skills**")
-            if result["missing_skills"]:
-                st.write(", ".join(result["missing_skills"]))
-            else:
-                st.write("None")
-
-        with col_m3:
-            st.markdown("**Additional skills in resume**")
-            if result["additional_skills"]:
-                st.write(", ".join(result["additional_skills"]))
-            else:
-                st.write("None")
-
-        st.markdown("---")
-
-        # Results table (Pandas DataFrame)
-        st.markdown("**Skill breakdown**")
-        df = result["results_df"]
-        st.dataframe(df, width="stretch", hide_index=True)
-
-        # "How is this score calculated?" expander
-        with st.expander("How is this score calculated?"):
-            st.write(
-                "Match score = (required skills found in resume / total required skills) * 100\n\n"
-                "- Required skills are skills extracted from the job description.\n"
-                "- Equal weighting across all required skills.\n"
-                "- Duplicate mentions of a skill count once.\n"
-                "- Additional skills in the resume are not counted in the score.\n"
-                "- If no recognized skills are found in the job description, the score is 0%."
-            )
-
-        # Download JSON and CSV buttons at the bottom
-        st.markdown("<br>", unsafe_allow_html=True)
-        exp_col1, exp_col2, _ = st.columns([1.5, 1.5, 5])
-        with exp_col1:
-            csv_bytes = df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                "Download CSV",
-                data=csv_bytes,
-                file_name="skill_match_results.csv",
-                mime="text/csv",
-                width="stretch"
-            )
-        with exp_col2:
-            json_payload = {
-                "matched_skills": result["matched_skills"],
-                "missing_skills": result["missing_skills"],
-                "match_score": result["match_score"]
-            }
-            json_bytes = json.dumps(json_payload, indent=2).encode("utf-8")
-            st.download_button(
-                "Download JSON",
-                data=json_bytes,
-                file_name="skill_match_results.json",
-                mime="application/json",
-                width="stretch"
-            )
+            # Right column (details)
+            with col_details:
+                _render_details(result)
     else:
         st.warning("No results found. Please return to the input page.")
