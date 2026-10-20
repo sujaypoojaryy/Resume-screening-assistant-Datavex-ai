@@ -3,7 +3,6 @@
 A recruiter screening assistant built using Streamlit, scikit-learn, NumPy, and Pandas.
 Implements a two-view architecture (Input View and Results View) using st.session_state.
 """
-import json
 import streamlit as st
 
 from matcher.extract import SkillExtractor
@@ -224,31 +223,6 @@ elif st.session_state["current_view"] == "results":
                     "- Duplicate mentions of a skill count once.\n"
                     "- Additional skills in the resume are not counted in the score.\n"
                     "- If no recognized skills are found in the job description, the score is 0%."
-                )
-
-            exp_col1, exp_col2, _ = st.columns([1.5, 1.5, 3])
-            with exp_col1:
-                csv_bytes = df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    "Download CSV",
-                    data=csv_bytes,
-                    file_name="skill_match_results.csv",
-                    mime="text/csv",
-                    width="stretch",
-                )
-            with exp_col2:
-                json_payload = {
-                    "matched_skills": res["matched_skills"],
-                    "missing_skills": res["missing_skills"],
-                    "match_score": res["match_score"],
-                }
-                json_bytes = json.dumps(json_payload, indent=2).encode("utf-8")
-                st.download_button(
-                    "Download JSON",
-                    data=json_bytes,
-                    file_name="skill_match_results.json",
-                    mime="application/json",
-                    width="stretch",
                 )
 
         # If total_required == 0, skip the score panel and show only st.warning across full width

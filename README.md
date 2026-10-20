@@ -2,6 +2,8 @@
 
 A recruiter screening assistant. It extracts technical skills from a resume and a job description, calculates a match score, and lists matched, missing and additional skills. It is meant to support manual review, never to reject candidates automatically.
 
+**Live Application:** [https://resume2jdmatcher.streamlit.app/](https://resume2jdmatcher.streamlit.app/)
+
 ---
 
 ## 1. Tech stack
@@ -10,7 +12,7 @@ A recruiter screening assistant. It extracts technical skills from a resume and 
 - **Web UI:** Streamlit
 - **Skill extraction:** scikit-learn (`CountVectorizer` with a custom vocabulary, n-gram range up to the longest skill name)
 - **Score computation:** NumPy (binary skill vector)
-- **Data and reporting:** Pandas (skills config loading, results table, CSV & JSON export)
+- **Data and reporting:** Pandas (skills config loading, results table)
 - **Document parsing:** `pypdf` (PDF), `python-docx` (DOCX), plain text (UTF-8 with Latin-1 fallback)
 - **Testing:** `pytest` (38 test cases)
 
@@ -44,6 +46,11 @@ project-folder/
 
 ## 3. Setup and run
 
+### Live Deployment
+The application is deployed on Streamlit Community Cloud:
+🔗 **[https://resume2jdmatcher.streamlit.app/](https://resume2jdmatcher.streamlit.app/)**
+
+### Local Setup
 1. Go into the project folder:
 ```bash
    cd project-folder
@@ -72,7 +79,7 @@ project-folder/
 | :--- | :--- |
 | **scikit-learn** | `CountVectorizer` is built with a custom vocabulary made from the skill names and aliases in `skills.json`. It counts which skill terms appear in a document, including multi-word skills. |
 | **NumPy** | For each required skill, a binary vector marks whether the resume contains it (1) or not (0). The sum of the vector is the number of matched skills. |
-| **Pandas** | Loads `skills.json` into a DataFrame, builds the results table (Skill, In JD, In Resume, Status), and exports it to CSV. |
+| **Pandas** | Loads `skills.json` into a DataFrame and builds the results table (Skill, In JD, In Resume, Status). |
 | **pypdf** | Reads PDF files page by page and detects password-protected and image-only files. |
 | **python-docx** | Reads paragraphs and table cells from DOCX files. |
 
